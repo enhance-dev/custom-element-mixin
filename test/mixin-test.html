@@ -71,7 +71,7 @@
 
           const heading = testComponent.querySelector('h1')
           const textColor = window.getComputedStyle(heading).color
-          assert.equal(textColor, 'rgb(0,0,255)', 'global nested styles made it');
+          assert.equal(textColor, 'rgb(0, 0, 255)', 'global nested styles made it');
 
           const testComponentTwo = document.querySelector('my-element[heading="two"]')
           const textContentTwo = testComponentTwo.querySelector('h1').textContent
