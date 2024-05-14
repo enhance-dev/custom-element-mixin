@@ -2,7 +2,7 @@
 const CustomElementMixin = (superclass) => class extends superclass {
   constructor() {
     super()
-
+    this.expandSlots = this.expandSlots.bind(this)
     // Has this element been server side rendered
     const enhanced = this.hasAttribute('enhanced')
 
@@ -27,15 +27,23 @@ const CustomElementMixin = (superclass) => class extends superclass {
       .forEach((tag) => { this.template.content.removeChild(tag) })
 
     // Expands the Custom Element with the template content
-    const hasSlots = this.template.content.querySelectorAll('slot')?.length
+    this.hasSlots = this.template.content.querySelectorAll('slot')?.length
 
     // If the Custom Element was already expanded by SSR it will have the "enhanced" attribute so do not replaceChildren
     // If this Custom Element was added dynamically with JavaScript then use the template contents to expand the element
-    if (!enhanced && !hasSlots) {
+    if (!enhanced && !this.hasSlots) {
       this.replaceChildren(this.template.content.cloneNode(true))
-    } else if (!enhanced && hasSlots) {
-      this.innerHTML = this.expandSlots(this)
+    } else if (!enhanced && this.hasSlots) {
+      this.innerHTML = this.expandSlots(this.innerHTML)
     }
+
+  }
+
+  render(args) {
+    const content = super.render(args)
+    return this.hasSlots
+      ? this.expandSlots(content)
+      : content
   }
 
   toKebabCase(str) {
@@ -110,11 +118,11 @@ const CustomElementMixin = (superclass) => class extends superclass {
   }
 
 
-  expandSlots(here) {
+  expandSlots(str) {
     const fragment = document.createElement('div')
-    fragment.innerHTML = here.innerHTML
+    fragment.innerHTML = str
     fragment.attachShadow({ mode: 'open' }).appendChild(
-      here.template.content.cloneNode(true)
+      this.template.content.cloneNode(true)
     )
 
     const children = Array.from(fragment.childNodes)
