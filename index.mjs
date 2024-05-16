@@ -54,8 +54,10 @@ const CustomElementMixin = (superclass) => class extends superclass {
     const styles = this.parseCSS(tag.textContent)
 
     if (scope === 'global') {
-      return styles
-    }
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(tag.textContent)
+      return sheet
+    } 
 
     const rules = styles.cssRules
     const sheet = new CSSStyleSheet();
