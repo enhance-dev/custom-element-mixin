@@ -24,6 +24,10 @@
       const { attrs={} } = state
       const { heading='default' } = attrs
       return html`
+        <style scope="global">
+          h1 { color:green; }
+          my-element { h1 { color:blue; } }
+        </style>
         <style>
           :host {
             color: red;
@@ -60,6 +64,10 @@
           const testComponent = document.querySelector('my-element[heading="one"]')
           const textContent = testComponent.querySelector('h1').textContent
           assert.equal(textContent, 'one', 'Should expand template with heading')
+
+          const heading = testComponent.querySelector('h1')
+          const textColor = window.getComputedStyle(heading).color
+          assert.equal(textColor, 'rgb(0, 0, 255)', 'global nested styles made it');
 
           const testComponentTwo = document.querySelector('my-element[heading="two"]')
           const textContentTwo = testComponentTwo.querySelector('h1').textContent
