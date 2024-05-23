@@ -34,7 +34,6 @@
     }
 
     class MyCustomElement extends CustomElementMixin(TemplateMixin(BaseElement)) {
-      static registeredName = 'my-element'
       constructor() {
         super()
         this.header = this.querySelector('h1')
@@ -48,14 +47,11 @@
         return [ 'heading' ]
       }
 
-      attributeChangedCallback(name, old, value) {
-        if (old !== value) {
-          if (name === 'heading') {
-            this.header.textContent = value
-          }
-        }
+      headingChanged(value) {
+        this.header.textContent = value
       }
     }
+
     customElements.define('my-element', MyCustomElement)
 
     runTests(()=> {
@@ -73,6 +69,7 @@
           const textContentThree = testComponentThree.querySelector('h1').textContent
           assert.equal(textContentThree, 'three', 'Should expand template with heading')
         })
+
         it('should remove style blocks', ()=> {
           const testComponent = document.querySelector('my-element[heading="one"]')
           const styles = testComponent.querySelector('style')
