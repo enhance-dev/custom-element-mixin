@@ -152,25 +152,25 @@ const CustomElementMixin = (superclass) => class extends superclass {
       if (slot) {
         if (slot.name) {
           if (!namedSlots[slot.name]) namedSlots[slot.name] = { slotNode: slot, contentToSlot: [] }
-          if (child['dataset']) {
-            child.dataset.slotted = true
+          if (child['setAttribute']) {
+            child.setAttribute('slot', '')
             namedSlots[slot.name].contentToSlot.push(child)
           }
           else {
             const wrapperSpan = document.createElement('span')
-            wrapperSpan.dataset.slotted = true
+            wrapperSpan.setAttribute('slot', '')
             wrapperSpan.appendChild(child)
             namedSlots[slot.name].contentToSlot.push(wrapperSpan)
           }
         } else {
           if (!unnamedSlot["slotNode"]) unnamedSlot = { slotNode: slot, contentToSlot: [] }
           if (child['dataset']) {
-            child.dataset.slotted = true
+            child.setAttribute('slot', '')
             unnamedSlot.contentToSlot.push(child)
           }
           else {
             const wrapperSpan = document.createElement('span')
-            wrapperSpan.dataset.slotted = true
+            wrapperSpan.setAttribute('slot', '')
             wrapperSpan.appendChild(child)
             unnamedSlot.contentToSlot.push(wrapperSpan)
           }
