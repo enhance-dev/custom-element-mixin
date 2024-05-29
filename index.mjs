@@ -55,11 +55,6 @@ const CustomElementMixin = (superclass) => class extends superclass {
     }
   }
 
-  removeSlotTags(el) {
-    el.querySelectorAll('slot')
-      .forEach((tag) => { el.removeChild(tag) })
-  }
-
   toKebabCase(str) {
     return str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase()
   }
@@ -152,19 +147,11 @@ const CustomElementMixin = (superclass) => class extends superclass {
       if (slot) {
         if (slot.name) {
           if (!namedSlots[slot.name]) namedSlots[slot.name] = { slotNode: slot, contentToSlot: [] }
-          if (child['setAttribute']) {
-            child.setAttribute('slot', '')
-            namedSlots[slot.name].contentToSlot.push(child)
-          }
-          else {
-            const wrapperSpan = document.createElement('span')
-            wrapperSpan.setAttribute('slot', '')
-            wrapperSpan.appendChild(child)
-            namedSlots[slot.name].contentToSlot.push(wrapperSpan)
-          }
-        } else {
+          namedSlots[slot.name].contentToSlot.push(child)
+        }
+        else {
           if (!unnamedSlot["slotNode"]) unnamedSlot = { slotNode: slot, contentToSlot: [] }
-          if (child['dataset']) {
+          if (child['setAttribute']) {
             child.setAttribute('slot', '')
             unnamedSlot.contentToSlot.push(child)
           }
