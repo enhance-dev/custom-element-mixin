@@ -52,12 +52,14 @@
           ? this.shadowRoot
           : this
 
-        const slotEl = document.createElement('div')
-        const slottedElements = root.querySelectorAll('[slot=""]')
-        for (const value of slottedElements.values()) {
-          slotEl.appendChild(value)
+        if (!this.shadowRoot) {
+          const slotEl = document.createElement('div')
+          const slottedElements = root.querySelectorAll('[slot=""]')
+          for (const value of slottedElements.values()) {
+            slotEl.appendChild(value)
+          }
+          updated.innerHTML = this.expandSlots(slotEl.innerHTML, updated.innerHTML)
         }
-        updated.innerHTML = this.expandSlots(slotEl.innerHTML, updated.innerHTML)
 
         morphdom(
           root,
