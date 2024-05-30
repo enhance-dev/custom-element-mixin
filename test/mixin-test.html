@@ -24,6 +24,10 @@
       const { attrs={} } = state
       const { heading='default' } = attrs
       return html`
+        <style scope="global">
+          h1 { color:green; }
+          my-element { h1 { color:blue; } }
+        </style>
         <style>
           :host {
             color: red;
@@ -34,7 +38,6 @@
     }
 
     class MyCustomElement extends CustomElementMixin(TemplateMixin(BaseElement)) {
-      static registeredName = 'my-element'
       constructor() {
         super()
         this.header = this.querySelector('h1')
@@ -48,14 +51,11 @@
         return [ 'heading' ]
       }
 
-      attributeChangedCallback(name, old, value) {
-        if (old !== value) {
-          if (name === 'heading') {
-            this.header.textContent = value
-          }
-        }
+      headingChanged(value) {
+        this.header.textContent = value
       }
     }
+
     customElements.define('my-element', MyCustomElement)
 
     runTests(()=> {
@@ -65,6 +65,10 @@
           const textContent = testComponent.querySelector('h1').textContent
           assert.equal(textContent, 'one', 'Should expand template with heading')
 
+          const heading = testComponent.querySelector('h1')
+          const textColor = window.getComputedStyle(heading).color
+          assert.equal(textColor, 'rgb(0, 0, 255)', 'global nested styles made it');
+
           const testComponentTwo = document.querySelector('my-element[heading="two"]')
           const textContentTwo = testComponentTwo.querySelector('h1').textContent
           assert.equal(textContentTwo, 'two', 'Should expand template with heading')
@@ -73,6 +77,7 @@
           const textContentThree = testComponentThree.querySelector('h1').textContent
           assert.equal(textContentThree, 'three', 'Should expand template with heading')
         })
+
         it('should remove style blocks', ()=> {
           const testComponent = document.querySelector('my-element[heading="one"]')
           const styles = testComponent.querySelector('style')

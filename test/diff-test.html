@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Enhance Custom Element Mixin DOM Diffing Test</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
+</head>
+<body>
+
+  <my-heading id="heading-one">
+    <button>Submit</button>
+  </my-heading>
+
+  <my-heading id="heading-two">
+    Just text
+  </my-heading>
+
+
+  <script type="module">
+    import { runTests } from '@web/test-runner-mocha'
+    import { assert } from '@esm-bundle/chai'
+    import BaseElement from '@enhance/base-element'
+    import TemplateMixin from '@enhance/template-mixin'
+    import CustomElementMixin from '../index.mjs'
+    import morphdom from 'morphdom'
+
+    class CustomElement extends CustomElementMixin(TemplateMixin(BaseElement)) {}
+
+    const MorphdomMixin = (superclass) => class extends superclass {
+      constructor(args) {
+        super(args)
+        this.process = this.process.bind(this)
+      }
+
+      attributeChangedCallback(name, oldValue, newValue) {
+        if (oldValue !== newValue) {
+          this.process()
+        }
+      }
+
+      process() {
+        const tmp = this.render({
+          html: this.html,
+          state: this.state
+        }).trim()
+
+        const updated = document.createElement('div')
+        updated.innerHTML = tmp
+        this.scrubTemplate(updated)
+
+        const root = this.shadowRoot
+          ? this.shadowRoot
+          : this
+
+        if (!this.shadowRoot) {
+          const slotEl = document.createElement('div')
+          const slottedElements = root.querySelectorAll('[slot=""]')
+          for (const value of slottedElements.values()) {
+            slotEl.appendChild(value)
+          }
+          updated.innerHTML = this.expandSlots(slotEl.innerHTML, updated.innerHTML)
+        }
+
+        morphdom(
+          root,
+          updated,
+          {
+            childrenOnly: true
+          }
+        )
+      }
+    }
+
+    function MyHeading({ html, state }) {
+      const { attrs = {} } = state
+      const { heading = "default" } = attrs
+      return html`
+        <style>
+          :host > h1{
+            font-size: 2rem;
+            text-transform: uppercase;
+          }
+        </style>
+        <h1>${heading}</h1>
+        <p>${heading}</p>
+        <a href="/foo/${heading}"></a>
+        <slot></slot>
+      `
+    }
+
+    class MyHeadingElement extends MorphdomMixin(CustomElement) {
+      constructor() {
+        super()
+      }
+
+      static get observedAttributes() {
+        return ["heading"]
+      }
+
+      render(args) {
+        return MyHeading(args)
+      }
+    }
+
+    customElements.define("my-heading", MyHeadingElement)
+
+    runTests(()=> {
+      describe('CustomElementMixin Slots', ()=> {
+        it('Should render default content', ()=> {
+          const testComponent = document.querySelector('#heading-one')
+          const textContent = testComponent.querySelector('h1').textContent
+          assert.equal(textContent, 'default', 'Default heading is present')
+        })
+
+
+        it('Should expand unnamed slot', ()=> {
+          const testComponent = document.querySelector('#heading-one')
+          const buttonElement = testComponent.querySelector('button')
+          assert.ok(buttonElement, 'Unnamed slot is expanded')
+        })
+
+        it('Updating heading attribute should re-render the element with slotted content', ()=> {
+          const templateElement = document.getElementById('my-heading-template')
+          const testComponent = document.querySelector('#heading-one')
+          testComponent.setAttribute('heading', 'new heading')
+          const textContent = testComponent.querySelector('h1').textContent
+          const buttonElement = testComponent.querySelector('button')
+          assert.equal(textContent, 'new heading', 'Updated heading')
+          assert.ok(buttonElement, 'Unnamed slot is expanded')
+        })
+
+        it('Should expand unnamed slot with text node', ()=> {
+          const testComponent = document.querySelector('#heading-two')
+          const textContent = testComponent.textContent
+          const regex = new RegExp('Just text')
+          assert.ok(regex.test(textContent), 'Text node is present')
+        })
+
+        it('Updating heading attribute should re-render the element with slotted text node', ()=> {
+          const templateElement = document.getElementById('my-heading-template')
+          const testComponent = document.querySelector('#heading-two')
+          testComponent.setAttribute('heading', 'new heading')
+          const headingTextContent = testComponent.querySelector('h1').textContent
+          const textContent = testComponent.textContent
+          const regex = new RegExp('Just text')
+          assert.ok(regex.test(textContent), 'Text node is present')
+          assert.equal(headingTextContent, 'new heading', 'Updated heading')
+        })
+      })
+    })
+  </script>
+</body>
+</html>

@@ -2,39 +2,56 @@
 const CustomElementMixin = (superclass) => class extends superclass {
   constructor() {
     super()
-
+    this.expandSlots = this.expandSlots.bind(this)
+    this.removeStyleTags = this.removeStyleTags.bind(this)
+    this.removeScriptTags = this.removeScriptTags.bind(this)
+    this.expandTemplate = this.expandTemplate.bind(this)
+    this.scrubTemplate = this.scrubTemplate.bind(this)
     // Has this element been server side rendered
-    const enhanced = this.hasAttribute('enhanced')
+    this.enhanced = this.hasAttribute('enhanced')
+    // Expands the Custom Element with the template content
+    this.hasSlots = Boolean(this.template.content.querySelectorAll('slot')?.length)
+    this.scrubTemplate(this.template.content)
+    this.expandTemplate()
+  }
 
+  scrubTemplate(el) {
+    this.removeStyleTags(el)
+    this.removeScriptTags(el)
+    return el
+  }
+
+  expandTemplate() {
+    // If the Custom Element was already expanded by SSR it will have the "enhanced" attribute so do not replaceChildren
+    if (!this.enhanced && !this.hasSlots) {
+      this.replaceChildren(this.scrubTemplate(this.template.content.cloneNode(true)))
+    // If this Custom Element was added dynamically with JavaScript then use the template contents to expand the element
+    } else if (!this.enhanced && this.hasSlots) {
+      this.innerHTML = this.expandSlots(this.innerHTML, this.template.innerHTML)
+    }
+  }
+
+  removeScriptTags(el) {
+    // Removes script tags as they are already appended to the body by SSR
+    // TODO: If only added dynamically in the browser we need to insert the script tag after running the script transform on it. As well as handle deduplication.
+    el.querySelectorAll('script')
+      .forEach((tag) => { el.content.removeChild(tag) })
+  }
+
+  removeStyleTags(el) {
     // Handle style tags
-    if (enhanced) {
+    if (this.enhanced) {
       // Removes style tags as they are already inserted into the head by SSR
-      this.template.content.querySelectorAll('style')
-        .forEach((tag) => { this.template.content.removeChild(tag) })
+      el.querySelectorAll('style')
+        .forEach((tag) => { el.removeChild(tag) })
     } else {
       let tagName = this.tagName
-      this.template.content.querySelectorAll('style')
+      el.querySelectorAll('style')
         .forEach((tag) => {
           let sheet = this.styleTransform({ tag, tagName, scope: tag.getAttribute('scope') })
           document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
-          this.template.content.removeChild(tag)
+          el.removeChild(tag)
         })
-    }
-
-    // Removes script tags as they are already appended to the body by SSR
-    // TODO: If only added dynamically in the browser we need to insert the script tag after running the script transform on it. As well as handle deduplication.
-    this.template.content.querySelectorAll('script')
-      .forEach((tag) => { this.template.content.removeChild(tag) })
-
-    // Expands the Custom Element with the template content
-    const hasSlots = this.template.content.querySelectorAll('slot')?.length
-
-    // If the Custom Element was already expanded by SSR it will have the "enhanced" attribute so do not replaceChildren
-    // If this Custom Element was added dynamically with JavaScript then use the template contents to expand the element
-    if (!enhanced && !hasSlots) {
-      this.replaceChildren(this.template.content.cloneNode(true))
-    } else if (!enhanced && hasSlots) {
-      this.innerHTML = this.expandSlots(this)
     }
   }
 
@@ -46,7 +63,9 @@ const CustomElementMixin = (superclass) => class extends superclass {
     const styles = this.parseCSS(tag.textContent)
 
     if (scope === 'global') {
-      return styles
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(tag.textContent)
+      return sheet
     }
 
     const rules = styles.cssRules
@@ -110,11 +129,13 @@ const CustomElementMixin = (superclass) => class extends superclass {
   }
 
 
-  expandSlots(here) {
+  expandSlots(str, templateStr) {
     const fragment = document.createElement('div')
-    fragment.innerHTML = here.innerHTML
+    fragment.innerHTML = str
+    const template = document.createElement('template')
+    template.innerHTML = templateStr
     fragment.attachShadow({ mode: 'open' }).appendChild(
-      here.template.content.cloneNode(true)
+      template.content.cloneNode(true)
     )
 
     const children = Array.from(fragment.childNodes)
@@ -127,9 +148,19 @@ const CustomElementMixin = (superclass) => class extends superclass {
         if (slot.name) {
           if (!namedSlots[slot.name]) namedSlots[slot.name] = { slotNode: slot, contentToSlot: [] }
           namedSlots[slot.name].contentToSlot.push(child)
-        } else {
+        }
+        else {
           if (!unnamedSlot["slotNode"]) unnamedSlot = { slotNode: slot, contentToSlot: [] }
-          unnamedSlot.contentToSlot.push(child)
+          if (child['setAttribute']) {
+            child.setAttribute('slot', '')
+            unnamedSlot.contentToSlot.push(child)
+          }
+          else {
+            const wrapperSpan = document.createElement('span')
+            wrapperSpan.setAttribute('slot', '')
+            wrapperSpan.appendChild(child)
+            unnamedSlot.contentToSlot.push(wrapperSpan)
+          }
         }
       }
     })
