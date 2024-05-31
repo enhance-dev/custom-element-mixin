@@ -54,7 +54,7 @@
 
         if (!this.shadowRoot) {
           const slotEl = document.createElement('div')
-          const slottedElements = root.querySelectorAll('[slot=""]')
+          const slottedElements = root.querySelectorAll(`${this.tagName.toLowerCase()} > [slot=""]`)
           for (const value of slottedElements.values()) {
             slotEl.appendChild(value)
           }
