@@ -151,13 +151,13 @@ const CustomElementMixin = (superclass) => class extends superclass {
         }
         else {
           if (!unnamedSlot["slotNode"]) unnamedSlot = { slotNode: slot, contentToSlot: [] }
-          if (child['setAttribute']) {
-            child.setAttribute('slot', '')
+          if (child['dataset']) {
+            child.dataset.slot = this.instanceID
             unnamedSlot.contentToSlot.push(child)
           }
           else {
             const wrapperSpan = document.createElement('span')
-            wrapperSpan.setAttribute('slot', '')
+            wrapperSpan.dataset.slot = this.instanceID
             wrapperSpan.appendChild(child)
             unnamedSlot.contentToSlot.push(wrapperSpan)
           }
