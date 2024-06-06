@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Enhance Custom Element Script Test</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
+</head>
+<body>
+
+  <my-element heading="two"></my-element>
+
+  <script type="module">
+    import { runTests } from '@web/test-runner-mocha'
+    import { assert } from '@esm-bundle/chai'
+    import BaseElement from '@enhance/base-element'
+    import TemplateMixin from '@enhance/template-mixin'
+    import CustomElementMixin from '../index.mjs'
+
+    function MySingleFileComponent({ html, state  }) {
+      const { attrs={} } = state
+      const { heading='default' } = attrs
+      return html`
+        <style scope="global">
+          h1 { color:green; }
+          my-element { h1 { color:blue; } }
+        </style>
+        <style>
+          :host {
+            color: red;
+          }
+        </style>
+        <h1>${heading}</h1>
+        <script>
+          console.log("Script should not be removed")
+        <${'/script>'}
+      `
+    }
+
+    class MyCustomElement extends CustomElementMixin(TemplateMixin(BaseElement)) {
+      constructor() {
+        super()
+        this.header = this.querySelector('h1')
+      }
+
+      render(args) {
+        return MySingleFileComponent(args)
+      }
+
+      static get observedAttributes() {
+        return [ 'heading' ]
+      }
+
+      headingChanged(value) {
+        this.header.textContent = value
+      }
+    }
+
+    customElements.define('my-element', MyCustomElement)
+
+    runTests(()=> {
+      describe('CustomElementMixin', ()=> {
+        it('should not remove scripts when dynamically added', ()=> {
+          let MyElementConstructor = customElements.get('my-element')
+          let elem = new MyElementConstructor()
+          elem.setAttribute('heading', 'one')
+          document.body.appendChild(elem)
+          const testComponent = document.querySelector('my-element[heading="one"]')
+          const textContent = testComponent.querySelector('h1').textContent
+          assert.equal(textContent, 'one', 'Should expand template with heading')
+
+          const heading = testComponent.querySelector('h1')
+          const textColor = window.getComputedStyle(heading).color
+          assert.equal(textColor, 'rgb(0, 0, 255)', 'global nested styles made it');
+
+          const script = testComponent.querySelector('script')
+          assert.isNotNull(script, 'script tag made it');
+          const scriptText = script.textContent.trim()
+          assert.equal(scriptText, `console.log("Script should not be removed")`, 'script tag made it');
+        })
+
+        it('should remove scripts when SSR', ()=> {
+          const testComponentTwo = document.querySelector('my-element[heading="two"]')
+          testComponentTwo.setAttribute('enhanced', '✨')
+          const textContentTwo = testComponentTwo.querySelector('h1').textContent
+          assert.equal(textContentTwo, 'two', 'Should expand template with heading')
+
+          const script = testComponentTwo.querySelector('script')
+          console.log(script)
+          assert.isNull(script, 'script tag was removed');
+        })
+      })
+    })
+  </script>
+</body>
+</html>

@@ -34,8 +34,10 @@ const CustomElementMixin = (superclass) => class extends superclass {
   removeScriptTags(el) {
     // Removes script tags as they are already appended to the body by SSR
     // TODO: If only added dynamically in the browser we need to insert the script tag after running the script transform on it. As well as handle deduplication.
-    el.querySelectorAll('script')
-      .forEach((tag) => { el.removeChild(tag) })
+    if (this.enhanced) {
+      el.querySelectorAll('script')
+        .forEach((tag) => { el.removeChild(tag) })
+    }
   }
 
   removeStyleTags(el) {
